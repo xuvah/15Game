@@ -134,40 +134,56 @@ class Game15:
 
         return new_states
 
-    def solve_game(self, meta=None):
+    def solve_game(self, meta=None, method='BFS'):
         if not meta:
             meta_flat = list(range(1, 16)) + [0]
             meta = [meta_flat[i * 4:(i + 1) * 4] for i in range(4)]
-
         meta_id = tuple(num for row in meta for num in row)
-        queue = deque()
+
         visited = set()
-
         initial_state = Game15.from_parent(self.table, self.zero_pos.copy(), "")
-        queue.append((initial_state, []))
-        visited.add(initial_state.get_state_id())
+        initial_id = initial_state.get_state_id()
+        visited.add(initial_id)
 
-        while queue:
-            current_state, path = queue.popleft()
+        if method == 'BFS':
+            frontier = deque()
+            frontier_append = frontier.append
+            frontier_pop = frontier.popleft
+        elif method == 'DFS':
+            frontier = []
+            frontier_append = frontier.append
+            frontier_pop = frontier.pop
+        else:
+            raise ValueError("Método não suportado. Use 'BFS' ou 'DFS'.")
+
+        frontier_append((initial_state, []))
+
+        while frontier:
+            current_state, path = frontier_pop()
 
             if current_state.get_state_id() == meta_id:
                 print(f"Solução encontrada com {len(path)} movimentos")
                 return path
 
-            next_states = current_state.do_moves()
-
-            for next_state in next_states:
+            for next_state in current_state.do_moves():
                 next_id = next_state.get_state_id()
                 if next_id not in visited:
-                    queue.append((next_state, path + [next_state.move]))
                     visited.add(next_id)
+                    frontier_append((next_state, path + [next_state.move]))
 
             if len(visited) % 100000 == 0:
-                print(f"Visitados: {len(visited)} - Profundidade: {len(path)}")
+                print(f"Visitados: {len(visited)} - Profundidade atual: {len(path)}")
+
 
 # main
 if __name__ == "__main__":
     easy = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [0, 10, 11, 12],
+        [9, 13, 14,15]
+    ]
+    lot_of_moves = [
         [1, 2, 4, 3],
         [5, 6, 8, 7],
         [15, 13, 14, 12],
@@ -177,7 +193,7 @@ if __name__ == "__main__":
     game.print_board()
     print("Solucionável?", game.test_factible())
     time.sleep(1)
-    solve_path = game.solve_game()
+    solve_path = game.solve_game(method= 'DFS')
     print("Solução:", solve_path)
     root = tk.Tk()
     root.title("Jogo dos 15")
