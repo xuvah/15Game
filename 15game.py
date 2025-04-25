@@ -47,7 +47,8 @@ class Game15:
 
     @classmethod
     def from_parent(cls, table, zero_pos, move):
-        obj = cls(table)
+        obj = cls.__new__(cls)  # cria a instância sem chamar __init__
+        obj.table = table
         obj.zero_pos = zero_pos
         obj.move = move
         return obj
@@ -189,11 +190,11 @@ if __name__ == "__main__":
         [15, 13, 14, 12],
         [11, 10, 0, 9]
     ]
-    game = Game15(easy)
+    game = Game15()
     game.print_board()
     print("Solucionável?", game.test_factible())
     time.sleep(1)
-    solve_path = game.solve_game(method= 'DFS')
+    solve_path = game.solve_game(method= 'BFS')
     print("Solução:", solve_path)
     root = tk.Tk()
     root.title("Jogo dos 15")
