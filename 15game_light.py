@@ -4,6 +4,11 @@ import heapq
 import time
 import matplotlib.pyplot as plt
 import random
+from PIL import Image, ImageDraw, ImageFont
+import matplotlib.patches as patches
+import matplotlib.animation as animation
+from IPython.display import HTML
+import numpy as np
 
 def is_solvable(flat):
     inversions = 0
@@ -14,7 +19,14 @@ def is_solvable(flat):
     zero_row_from_bottom = 4 - (flat.index(0) // 4)
     return (inversions + zero_row_from_bottom) % 2 != 0
 
-def generate_random_board():
+def generate_random_board(easy=False):
+    if easy:
+        # Tabuleiro próximo da solução, mas embaralhado levemente
+        flat = list(range(1, 16)) + [0]
+        # Fazer um pequeno embaralhamento reversível
+        flat[12], flat[15] = flat[15], flat[12]  # troca 14 com 15, ainda é solucionável
+        return flat
+
     while True:
         flat = list(range(16))
         random.shuffle(flat)
@@ -154,6 +166,45 @@ def print_board_flat(flat):
         row = flat[i:i+4]
         print(" ".join(f"{n if n != 0 else '_':>2}" for n in row))
 
+def apply_move(board, move):
+    board = board[:]  # copy
+    idx = board.index(0)
+    x, y = idx % 4, idx // 4
+    dx, dy = {'Up': (0, -1), 'Down': (0, 1), 'Left': (-1, 0), 'Right': (1, 0)}[move]
+    nx, ny = x + dx, y + dy
+    if 0 <= nx < 4 and 0 <= ny < 4:
+        nidx = ny * 4 + nx
+        board[idx], board[nidx] = board[nidx], board[idx]
+    return board
+
+def draw_board(board):
+    img = Image.new("RGB", (160, 160), "white")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
+    for i, val in enumerate(board):
+        x = (i % 4) * 40
+        y = (i // 4) * 40
+        draw.rectangle([x, y, x+39, y+39], outline="black", width=2)
+        if val != 0:
+            draw.text((x+12, y+12), str(val), fill="black", font=font)
+    return img
+
+def generate_gif(start_board, moves, output_file="solucao.gif"):
+    frames = [draw_board(start_board)]  # Adiciona o estado inicial
+    board = start_board[:]
+    
+    # Adiciona as imagens dos movimentos
+    for move in moves:
+        board = apply_move(board, move)
+        frames.append(draw_board(board))
+
+    # Adiciona o quadro final, que será a última imagem
+    frames.append(draw_board(board))  # A última posição do tabuleiro
+    
+    # Define uma pausa maior no último quadro
+    duration = 300  # 300 ms entre quadros
+    frames[0].save(output_file, save_all=True, append_images=frames[1:], duration=duration, loop=0) # loop=0 faz o GIF parar no final
+
 if __name__ == "__main__":
     num_testes = 5 # Número de testes a serem realizados
     resultados_tempo = {'BFS': [], 'DFS': [], 'A*': []}
@@ -161,7 +212,7 @@ if __name__ == "__main__":
 
     for teste in range(1, num_testes + 1):
         print(f"\n===== Teste {teste} =====")
-        start = generate_random_board()
+        start = generate_random_board(False)
         print("Estado inicial:")
         print_board_flat(start)
 
@@ -176,12 +227,15 @@ if __name__ == "__main__":
                 print(f"Solução encontrada com {len(path)} movimentos")
                 print("Movimentos:", path)
                 resultados_movs[method].append(len(path))
+                generate_gif(start, path, f"resolucao_teste_{teste}_{method}.gif")
             else:
                 print("Nenhuma solução encontrada.")
                 resultados_movs[method].append(0)
 
             print(f"Tempo decorrido: {elapsed:.2f} segundos")
             resultados_tempo[method].append(elapsed)
+
+
 
     # Cálculo de médias
     medias_tempo = {m: sum(resultados_tempo[m])/num_testes for m in resultados_tempo}
